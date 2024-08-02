@@ -1,4 +1,4 @@
-# Minecraft Mouse Dynamics
+# AimNet Mouse Dynamics
 
 This repository contains a machine learning pipeline for analyzing mouse dynamics in Minecraft. The pipeline includes data preprocessing, model training, and evaluation for identifying distinct individuals via their mouse movement patterns.
 
@@ -22,8 +22,8 @@ The project includes:
 
 1. **Clone the Repository**:
     ```bash
-    git clone https://github.com/templateprotection/Minecraft-Mouse-Dynamics.git
-    cd Minecraft-Mouse-Dynamics
+    git clone https://github.com/templateprotection/AimNet-Mouse-Dynamics.git
+    cd AimNet-Mouse-Dynamics
     ```
 
 2. **Install Dependencies**:
