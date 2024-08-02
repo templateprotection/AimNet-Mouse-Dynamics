@@ -1,0 +1,9 @@
+
+*.iml
+*.xml
+*.pyc
+/.idea
+*.npy
+*.pth
+*.csv
+*.zip
