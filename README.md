@@ -42,7 +42,7 @@ The project includes:
 
 ## Configuration
 
-Edit the `main.py` file to configure the following parameters:
+Edit the `AimNet.py` file to configure the following parameters:
 - `SEQ_LENGTH`: Sequence length for each input sequence.
 - `CLASSIFIER_EPOCHS`: Number of epochs for training the classification model.
 - `EMBEDDING_EPOCHS`: Number of epochs for training the embedding model.
@@ -66,23 +66,23 @@ Edit the `main.py` file to configure the following parameters:
 
 1. **Preprocess Data and Train Models**:
     ```bash
-    python main.py
+    python AimNet.py
     ```
 
-    Adjust the `MODE` variable in `main.py` to:
+    Adjust the `MODE` variable in `AimNet.py` to:
     - `'train_classifier_model'`: Train the classification model.
     - `'train_embedding_model'`: Train the embedding model.
     - `'evaluate_embedding_model'`: Evaluate the embedding model.
 
 2. **Preprocessing**:
-    Set `DO_PREPROCESSING` to `True` to preprocess the data. Preprocessed data will be saved and can be reused to avoid reprocessing.
+    Set `DO_PREPROCESSING` to `True` to preprocess the data, or false if embedding files are already generated.
 
 3. **Evaluate Model**:
     If `MODE` is set to `'evaluate_embedding_model'`, the script will evaluate the embedding model and save the embeddings and labels.
 
 ## Contributing
 
-Contributions are welcome! Please submit a pull request or open an issue if you have suggestions or improvements.
+Contributions are welcome - Please submit a pull request or open an issue if you have suggestions or improvements.
 
 ## License
 
