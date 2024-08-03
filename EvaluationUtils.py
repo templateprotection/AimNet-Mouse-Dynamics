@@ -27,7 +27,7 @@ def evaluate_model(embeddings, labels, fuse_gallery, fuse_test, distance_functio
     print(f"ID ACCURACY [Fuse={fuse_gallery}]: {id_acc}  ({correct_users}/{total_users})")
 
     # Distance Histogram
-    plot_histogram(p_dists, n_dists, eer, eer_threshold)
+    plot_histogram(p_dists, n_dists, eer, eer_threshold, fuse_gallery, fuse_test)
 
 
 def get_all_embeddings(model, loader):
@@ -44,14 +44,14 @@ def get_all_embeddings(model, loader):
     return np.array(embeddings), np.array(labels)
 
 
-def plot_histogram(p_dists, n_dists, eer, eer_threshold):
+def plot_histogram(p_dists, n_dists, eer, eer_threshold, gal_fusion=1, test_fusion=1):
     plt.figure(figsize=(10, 6))
     plt.hist(p_dists, bins=50, color='blue', alpha=0.7, label='Positive Distances')
     plt.hist(n_dists, bins=50, color='red', alpha=0.7, label='Negative Distances')
     plt.axvline(eer_threshold, color='green', linestyle='--', label=f'EER = {eer:.4f}, Threshold: {eer_threshold:.4f}')
     plt.xlabel('Distance')
     plt.ylabel('Count')
-    plt.title('Histogram of Embedding Distances')
+    plt.title(f'Histogram of Embedding Distances ({gal_fusion}:{test_fusion}-Fusion)')
     plt.legend()
     plt.grid(True)
     plt.show()
