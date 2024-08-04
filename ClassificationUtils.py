@@ -4,6 +4,7 @@ from torch import nn, optim
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
+
 def create_data_loader(sequences, labels, batch_size=32, shuffle=True):
     sequences_tensor = torch.tensor(sequences, dtype=torch.float32)
     labels_tensor = torch.tensor(labels, dtype=torch.long)
@@ -62,7 +63,7 @@ def train_classification_model(model, train_loader, validation_loader, model_out
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            torch.save(model.state_dict(), f"./models/{model_output}")
+            torch.save(model.state_dict(), model_output)
 
     print('Training complete')
 
