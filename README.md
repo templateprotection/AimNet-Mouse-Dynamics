@@ -1,7 +1,7 @@
 # AimNet Mouse Dynamics
+The first open sourced approach to **One-Shot Learning for Mouse Dynamics** recognition, using a Siamese Neural Network. This repository includes data preprocessing, model training, and evaluation for identifying distinct individuals via their mouse movement patterns. The models were trained and tested on a dataset collected from over 2000 players in Minecraft to achieve satisfactory results described in the evaluation section below. 
 
-This repository contains a machine learning pipeline for analyzing mouse dynamics. The pipeline includes data preprocessing, model training, and evaluation for identifying distinct individuals via their mouse movement patterns. The models were trained and tested on a dataset collected from over 2000 players in Minecraft to achieve satisfactory results described in the evaluation section below.
-
+One-Shot Learning is highly advantageous for biometric recognition systems. It allows new users to enroll with just one data sample, eliminating the need for model re-training. The model generates a unique, compact embedding of mouse movement patterns from this single sample. These embeddings are distinct and can be efficiently compared to others using simple mathematical operations (i.e., Euclidean distance).
 
 
 ## Dataset Overview
