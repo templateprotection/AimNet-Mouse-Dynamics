@@ -81,7 +81,7 @@ Once the classifier is trained, it is used as the base for an embedding model, d
 </table>
 
 ## Performance Results
-The evaluation script will produce a histogram of distances between positive samples (embeddings from the same user) and negative samples (embeddings from different users). The desired result is that these two sets of distances form separable peaks with little to no overlap between them.The images below show examples of histograms generated using a single embedding (Figure 1) and 30 embeddings (Figure 2), producing Equal Error Rates of 23% and 0%, respectively. For continuous authentication, these results have very practical applications in account security, and possibly 1:N user identification.
+The evaluation script will produce a histogram of distances between positive samples (embeddings from the same user) and negative samples (embeddings from different users). The desired result is that these two sets of distances form separable peaks with little to no overlap between them.The images below show examples of histograms generated using a single embedding (Figure 1) and 30 embeddings (Figure 2), producing Equal Error Rates of 23% and 0%, respectively. For continuous authentication, these results have very practical applications in account security, and possibly 1:N user identification. Each sequence of 100 mouse movements requires exactly 5 seconds of active movement, which translates to an average time of 45.7 seconds of gameplay. This means a single embedding has an average time-to-authenticate of 45.7 seconds, while 30 fused embeddings requires ~22 minutes of gameplay. These are preliminary results, and there is much room for optimization.
 
 <table style="border-collapse: collapse; width: 100%;">
   <tr>
