@@ -1,5 +1,5 @@
 # AimNet Mouse Dynamics
-The first open sourced approach to **One-Shot Learning for Mouse Dynamics** recognition, using a Siamese Neural Network. This repository includes data preprocessing, model training, and evaluation for identifying distinct individuals via their mouse movement patterns. The models were trained and tested on a dataset collected from over 2000 players in Minecraft to achieve satisfactory results described in the evaluation section below. 
+An open sourced approach to **One-Shot Learning for Mouse Dynamics** recognition, using a Siamese Neural Network. This repository includes data preprocessing, model training, and evaluation for identifying distinct individuals via their mouse movement patterns. The models were trained and tested on a dataset collected from over 2000 players in Minecraft to achieve satisfactory results described in the evaluation section below. 
 
 One-Shot Learning is highly advantageous for biometric recognition systems. It allows new users to enroll with just one data sample, eliminating the need for model re-training. The model generates a unique, compact embedding of mouse movement patterns from this single sample. These embeddings are distinct and can be efficiently compared to others using simple mathematical operations (i.e., Euclidean distance).
 
@@ -101,6 +101,13 @@ The evaluation script will produce a histogram of distances between positive sam
     </td>
   </tr>
 </table>
+
+<div align="center">
+    <h4>Fusion of embeddings vs Equal Error Rate</h4>
+    <img src="results/Fusion_vs_EER.png" width="75%" style="max-width: 300px;" />
+    <p><i>Figure 3: A plot showing the relationship between equal error rate and the number of fused embeddings. The EER starts at 0.23, and rapidly declines to 0.</i></p>
+</div>
+
 
 These results were achieved on a held-out test set of the remaining 1219 users that were not part of training.
 
