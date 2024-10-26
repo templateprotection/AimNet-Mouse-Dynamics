@@ -3,6 +3,7 @@ import random
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
+from scipy.spatial.distance import pdist, cdist
 from sklearn.metrics import roc_curve
 from tqdm import tqdm
 
@@ -12,14 +13,9 @@ from TripletUtils import embeddings_to_dict
 def evaluate_model(embeddings, labels, fuse_gallery, fuse_test, distance_function):
     user_embeddings = embeddings_to_dict(embeddings, labels)
     p_dists, n_dists, p_labels, n_labels = compute_fused_distances(user_embeddings, fuse_gallery, fuse_test, distance_function)
-
-    # EER calculation
-    labels = [1] * len(p_dists) + [0] * len(n_dists)
-    fpr, tpr, thresholds = roc_curve(labels, np.concatenate([p_dists, n_dists]))
-    eer_idx = np.nanargmin(np.abs(fpr - (1 - tpr)))
-    eer_threshold = thresholds[eer_idx]
-    eer = 1 - fpr[eer_idx]
-
+    fused_embeddings, fused_labels = fuse_embeddings(user_embeddings, fuse_gallery)
+    my_dict = embeddings_to_dict(fused_embeddings, fused_labels)
+    eer, eer_threshold, _, _ = compute_pairwise_eer(my_dict, num_imposter_users=20)
     p_dists = np.array(p_dists)
     n_dists = np.array(n_dists)
 
@@ -88,6 +84,40 @@ def compute_pairwise_distances(embeddings):
     return dist_matrix
 
 
+def compute_pairwise_eer(user_embeddings, num_imposter_users=None):
+    num_imposter_users = num_imposter_users or len(user_embeddings)-1
+    genuine_dists = []
+    imposter_dists = []
+
+    users = list(user_embeddings.keys())
+
+    for user in tqdm(users):
+        current_user_embeddings = user_embeddings[user]
+        if len(current_user_embeddings) > 1:
+            pairwise_dists = pdist(current_user_embeddings, metric='euclidean')
+            genuine_dists.extend(pairwise_dists)
+
+        impostor_users = np.random.choice([u for u in users if u != user], size=num_imposter_users, replace=False)
+
+        for imp_user in impostor_users:
+            imposter_embeddings = user_embeddings[imp_user]
+            cross_dists = cdist(current_user_embeddings, imposter_embeddings, metric='euclidean')
+            imposter_dists.extend(cross_dists.flatten())
+
+    genuine_labels = np.ones(len(genuine_dists))
+    imposter_labels = np.zeros(len(imposter_dists))
+
+    dists_flat = np.concatenate([genuine_dists, imposter_dists])
+    labels_flat = np.concatenate([genuine_labels, imposter_labels])
+
+    fpr, tpr, thresholds = roc_curve(labels_flat, dists_flat)
+    eer_idx = np.nanargmin(np.abs(fpr - (1 - tpr)))
+    eer_threshold = thresholds[eer_idx]
+    eer = 1 - fpr[eer_idx]
+
+    return eer, eer_threshold, genuine_dists, imposter_dists
+
+
 def compute_identification_acc(user_embeddings, fuse_num, max_users=1000, samples_per_user=2):
     total_fused_labels = []
     total_fused_embs = []
@@ -118,6 +148,21 @@ def compute_identification_acc(user_embeddings, fuse_num, max_users=1000, sample
     total_identified = np.count_nonzero(closest_labels == total_fused_labels)
     id_rate = total_identified / len(total_fused_labels)
     return id_rate, total_identified, len(total_fused_labels)
+
+
+def fuse_embeddings(user_embeddings, fuse_num):
+    fused_labels = []
+    fused_embeddings = []
+    for user in user_embeddings:
+        embeddings = user_embeddings[user]
+        num_groups = len(embeddings) // fuse_num
+        embeddings = embeddings[:num_groups*fuse_num]  # Truncate excess
+        grouped_embeddings = embeddings.reshape((num_groups, fuse_num, embeddings.shape[-1]))
+        if num_groups >= 2:
+            fused_embeddings.extend(grouped_embeddings.mean(axis=1))
+            fused_labels.extend([user] * num_groups)
+
+    return np.array(fused_embeddings), np.array(fused_labels)
 
 
 def compute_fused_distances(user_embeddings, fuse_gallery, fuse_test, distance_function):

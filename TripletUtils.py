@@ -3,13 +3,15 @@ from collections import defaultdict
 
 import numpy as np
 import torch
+from matplotlib import pyplot as plt
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
+from pytorch_metric_learning import losses, miners
 from tqdm import tqdm
 
 
 class EmbeddingModel(nn.Module):
-    def __init__(self, base_model, embedding_dimension=128, freeze_base=False):
+    def __init__(self, base_model, embedding_dimension=128, freeze_base=False, normalize=False):
         super(EmbeddingModel, self).__init__()
         self.base_model = base_model
 
@@ -20,10 +22,70 @@ class EmbeddingModel(nn.Module):
             for param in self.base_model.parameters():
                 param.requires_grad = False
 
+        self.normalize = normalize
+
     def forward(self, x):
         x = self.base_model(x)
         x = self.embedding_layer(x)
+        if self.normalize:
+            x = nn.functional.normalize(x, p=2, dim=1)
         return x
+
+
+
+class FusionModel(nn.Module):
+    def __init__(self, base_model, input_size):
+        super(FusionModel, self).__init__()
+        self.base_model = base_model
+        self.input_size = input_size
+
+    def forward(self, x):
+        chunks = torch.split(x, self.input_size, dim=1)
+        processed_chunks = [self.base_model(chunk) for chunk in chunks]
+        stacked_outputs = torch.stack(processed_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
+        averaged_output = torch.mean(stacked_outputs, dim=1)
+        return averaged_output
+
+
+class MultiScaleFusionModel(nn.Module):
+    def __init__(self, base_model, input_resolutions):
+        super(MultiScaleFusionModel, self).__init__()
+        self.base_model = base_model
+        self.input_resolutions = input_resolutions
+
+    def forward(self, x):
+        processed_chunks = []
+        for input_resolution in self.input_resolutions:
+            if input_resolution == 1:
+                chunks = x.unsqueeze(1)  # Shape: [batch_size, 1, SEQ_LENGTH, 2]
+            else:
+                summed_chunks = x.view(x.size(0), -1, input_resolution, 2).sum(dim=2)
+                chunks = summed_chunks
+
+            scale_chunks = []
+            for chunk in chunks:
+                scale_chunks.append(self.base_model(chunk))
+
+            stacked_outputs = torch.stack(scale_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
+            averaged_output = torch.mean(stacked_outputs, dim=1)
+            processed_chunks.append(averaged_output)
+        
+        stacked_outputs = torch.stack(processed_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
+        final_output = torch.mean(stacked_outputs, dim=1)
+
+        return final_output
+
+
+class CentroidModel(nn.Module):
+    def __init__(self, base_model):
+        super(CentroidModel, self).__init__()
+        self.base_model = base_model
+
+    def forward(self, x):
+        processed_chunks = [self.base_model(sequence) for sequence in x]
+        stacked_outputs = torch.stack(processed_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
+        averaged_output = torch.mean(stacked_outputs, dim=1)
+        return averaged_output
 
 
 class TripletLoss(nn.Module):
@@ -101,18 +163,27 @@ def accuracy(anchor, positive, negative):
 
     eer_diff = torch.abs(fpr - (1 - tpr))
     eer_idx = torch.argmin(eer_diff)
-    eer = 1 - fpr[eer_idx]  # TODO: This shouldn't need to be inverted. Fix issue above
+    eer = 1 - fpr[eer_idx]
     return 1 - eer
 
 
 def train_embedding_model(model, train_loader, validation_loader, model_output, num_epochs=10, learning_rate=0.001,
-                          distance_function='euclidean'):
-    criterion = TripletLoss(margin=1.0, distance=distance_function)
+                          distance_function='euclidean', margin=1.0):
+    criterion = TripletLoss(margin=margin, distance=distance_function)
+
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    # Semi hard
+    '''
+    miner = miners.TripletMarginMiner(margin=margin, type_of_triplets="semihard")
+    loss_func = losses.TripletMarginLoss(margin=margin)
+    '''
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
+    tot_accs = []
+    tot_val_accs = []
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
@@ -126,8 +197,17 @@ def train_embedding_model(model, train_loader, validation_loader, model_output, 
             positive_output = model(positive)
             negative_output = model(negative)
             accs.append(accuracy(anchor_output, positive_output, negative_output))
+            # Semi hard
+            '''
+            embeddings = torch.cat([anchor_output, positive_output, negative_output], dim=0)
+            labels = torch.cat([torch.zeros(anchor_output.size(0)), torch.ones(positive_output.size(0)),
+                                torch.ones(negative_output.size(0)) + 1], dim=0)
+            hard_triplets = miner(embeddings, labels)
+            loss = loss_func(embeddings, labels, hard_triplets)  # Semi hard triplet loss
+            '''
+            loss = criterion(anchor_output, positive_output, negative_output)  # Standard triplet loss
 
-            loss = criterion(anchor_output, positive_output, negative_output)
+
             loss.backward()
             optimizer.step()
 
@@ -137,7 +217,7 @@ def train_embedding_model(model, train_loader, validation_loader, model_output, 
         val_loss = 0.0
         val_accs = []
         with torch.no_grad():
-            for (anchor, positive, negative), _ in validation_loader:
+            for (anchor, positive, negative), _ in tqdm(validation_loader, total=len(validation_loader)):
                 anchor, positive, negative = anchor.to(device), positive.to(device), negative.to(device)
 
                 anchor_output = model(anchor)
@@ -151,7 +231,12 @@ def train_embedding_model(model, train_loader, validation_loader, model_output, 
             f'Epoch [{epoch + 1}/{num_epochs}], Training Loss: {running_loss / len(train_loader):.4f}, Validation Loss: {val_loss / len(validation_loader):.4f}')
         print(
             f'\t\t\t\tTraining Acc: {np.mean(accs):.4f}, Validation Acc: {np.mean(val_accs):.4f}')
-
+        tot_accs.append(np.mean(accs))
+        tot_val_accs.append(np.mean(val_accs))
+    plt.plot(tot_accs)
+    plt.plot(tot_val_accs)
+    plt.legend(['Training', 'Validation'])
+    plt.show()
 
 def embeddings_to_dict(embeddings, labels):
     user_embeddings = defaultdict(list)
