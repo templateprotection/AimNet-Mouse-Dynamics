@@ -32,7 +32,6 @@ class EmbeddingModel(nn.Module):
         return x
 
 
-
 class FusionModel(nn.Module):
     def __init__(self, base_model, input_size):
         super(FusionModel, self).__init__()
@@ -57,10 +56,10 @@ class MultiScaleFusionModel(nn.Module):
         processed_chunks = []
         for input_resolution in self.input_resolutions:
             if input_resolution == 1:
-                chunks = x.unsqueeze(1)  # Shape: [batch_size, 1, SEQ_LENGTH, 2]
+                chunks = x.unsqueeze(dim=1)  # Shape: [batch_size, 1, SEQ_LENGTH, 2]
             else:
-                summed_chunks = x.view(x.size(0), -1, input_resolution, 2).sum(dim=2)
-                chunks = summed_chunks
+                reshaped = x.view(x.size(0), x.size(1) // input_resolution, input_resolution, 2)
+                chunks = reshaped.sum(dim=2).unsqueeze(dim=1)  # Shape: [batch_size, SEQ_LENGTH // input_resolution, 2]
 
             scale_chunks = []
             for chunk in chunks:
@@ -69,7 +68,7 @@ class MultiScaleFusionModel(nn.Module):
             stacked_outputs = torch.stack(scale_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
             averaged_output = torch.mean(stacked_outputs, dim=1)
             processed_chunks.append(averaged_output)
-        
+
         stacked_outputs = torch.stack(processed_chunks, dim=1)  # Shape: [batch_size, fuse_num, out_size]
         final_output = torch.mean(stacked_outputs, dim=1)
 
@@ -207,7 +206,6 @@ def train_embedding_model(model, train_loader, validation_loader, model_output, 
             '''
             loss = criterion(anchor_output, positive_output, negative_output)  # Standard triplet loss
 
-
             loss.backward()
             optimizer.step()
 
@@ -237,6 +235,7 @@ def train_embedding_model(model, train_loader, validation_loader, model_output, 
     plt.plot(tot_val_accs)
     plt.legend(['Training', 'Validation'])
     plt.show()
+
 
 def embeddings_to_dict(embeddings, labels):
     user_embeddings = defaultdict(list)
