@@ -101,6 +101,29 @@ class LSTMClassifier(nn.Module):
         return x
 
 
+class LSTMClassifier2(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(LSTMClassifier2, self).__init__()
+        self.lstm1 = nn.LSTM(input_size, 128, batch_first=True, dropout=0.1)
+        self.batch_norm1 = nn.BatchNorm1d(128)
+        self.dropout = nn.Dropout(0.2)
+        self.lstm2 = nn.LSTM(128, 128, batch_first=True, dropout=0.1)
+        self.lstm3 = nn.LSTM(128, 128, batch_first=True, dropout=0.1)
+        self.fc = nn.Linear(128, output_size)
+
+    def forward(self, x):
+        x, _ = self.lstm1(x)
+        x = x.transpose(1, 2)
+        x = self.batch_norm1(x)
+        x = self.dropout(x)
+        x = x.transpose(1, 2)
+        x, _ = self.lstm2(x)
+        x, _ = self.lstm3(x)
+        x = x[:, -1, :]
+        x = self.fc(x)
+        return x
+
+
 class GRUClassifier(nn.Module):
     def __init__(self, input_size, output_size):
         super(GRUClassifier, self).__init__()
